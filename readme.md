@@ -8,24 +8,16 @@
 
 docker run -p 5672:5672 rabbitmq:alpine
 
-grpcurl -plaintext localhost:55000 list
-grpcurl -plaintext localhost:55001 list
+grpcurl -plaintext localhost:55000 describe
+grpcurl -plaintext localhost:55001 describe
 
 grpcurl \
-    -d '{ "message": "hello" }' \
+    -d '{ "text": "hello" }' \
     -plaintext \
     localhost:55000 \
-    test.Chat/Send
+    internal.receiver.Receiver/Publish
 
-###
 grpcurl \
-    -d '{}' \
     -plaintext \
     localhost:55001 \
-    test.Chat/Listen
-
-grpcurl \
-    -plaintext \
-    -d '{ "message": "hello", "receiverVersion": "rcv" }' \
-    localhost:55002 \
-    internal.Sender/NewMessage
+    internal.streamer.Streamer/Subscribe
