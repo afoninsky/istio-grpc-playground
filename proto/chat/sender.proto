@@ -1,0 +1,14 @@
+syntax = "proto3";
+package test;
+
+service Chat {
+	rpc Listen(Empty) returns (stream Message) {}
+}
+
+message Message {
+	string message = 1;
+	string receiverVersion = 2;
+	string senderVersion = 3;
+}
+
+message Empty {}
