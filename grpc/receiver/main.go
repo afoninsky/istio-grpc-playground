@@ -1,5 +1,5 @@
-//go:generate protoc --proto_path=../../proto/chat --go_out=plugins=grpc:./proto-chat receiver.proto
-//go:generate protoc --proto_path=../../proto/internal --go_out=plugins=grpc:./proto-internal sender.proto
+//go:generate protoc --proto_path=../../proto --go_out=plugins=grpc:./proto/receiver receiver.proto
+//go:generate protoc --proto_path=../../proto --go_out=plugins=grpc:./proto/streamer streamer.proto
 package main
 
 import (
@@ -13,56 +13,45 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
-	pbChat "./proto-chat"
-	pbInternal "./proto-internal"
+	pb "./proto/receiver"
+	pbStreamer "./proto/streamer"
 )
 
 var (
-	port          = flag.Int("port", 55000, "API port")
-	version       = flag.String("version", "rcv-v1", "Service version")
-	senderAddress = flag.String("sender_address", "localhost:55002", "Sender address")
+	port            = flag.Int("port", 55000, "API port")
+	version         = flag.String("version", "rcv-v1", "Service version")
+	streamerAddress = flag.String("streamer", "localhost:55001", "Streamer endpoint")
 )
 
-type chat struct {
-	client  pbInternal.SenderClient
-	version string
+type service struct {
+	client pbStreamer.StreamerClient
 }
 
 // redirect incoming message to the sender service
-func (c *chat) Send(ctx context.Context, input *pbChat.Message) (*pbChat.EmptyResponse, error) {
-	log.Printf("sending to the receiver -> %s", input.Message)
+func (s *service) Publish(ctx context.Context, input *pb.Message) (*pb.Empty, error) {
+	log.Printf("Publishing -> %s", input.Text)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	_, err := c.client.NewMessage(ctx, &pbInternal.Message{
-		Message:         input.Message,
-		ReceiverVersion: c.version,
+	_, err := s.client.Receive(ctx, &pbStreamer.Message{
+		Text: input.Text,
 	})
 	if err != nil {
 		log.Printf("failed to send: %v", err)
+		return &pb.Empty{}, err
 	}
-	return &pbChat.EmptyResponse{}, err
+	return &pb.Empty{}, nil
 }
 
 func main() {
 	flag.Parse()
 
 	// init connection to another service
-	conn, err := grpc.Dial(*senderAddress, grpc.WithInsecure())
+	conn, err := grpc.Dial(*streamerAddress, grpc.WithInsecure())
 	if err != nil {
-		log.Fatalf("did not connect: %v", err)
+		log.Fatalf("cant connect to %s: %v", *streamerAddress, err)
 	}
 	defer conn.Close()
-	client := pbInternal.NewSenderClient(conn)
-
-	// ctx, cancel := context.WithCancel(context.Background())
-	// defer cancel()
-	// _, sendErr := client.NewMessage(ctx, &pbInternal.Message{
-	// 	Message:         "qwe",
-	// 	ReceiverVersion: "asd",
-	// })
-	// if sendErr != nil {
-	// 	log.Fatalf("failed to send: %v", sendErr)
-	// }
+	client := pbStreamer.NewStreamerClient(conn)
 
 	// create local grpc service
 	lis, listenErr := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", *port))
@@ -70,9 +59,8 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	grpcServer := grpc.NewServer()
-	pbChat.RegisterChatServer(grpcServer, &chat{
-		client:  client,
-		version: *version,
+	pb.RegisterReceiverServer(grpcServer, &service{
+		client: client,
 	})
 	reflection.Register(grpcServer)
 	log.Printf("Starting API on port %d (version %s)", *port, *version)

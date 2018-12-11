@@ -1,0 +1,15 @@
+syntax = "proto3";
+package internal.streamer;
+
+service Streamer {
+	// receives message ONLY from "consumer" service
+	rpc Receive(Message) returns (Empty) {}
+	// sends messages to any subscriber
+	rpc Subscribe(Empty) returns (stream Message) {}
+}
+
+message Message {
+	string text = 1;
+}
+
+message Empty {}

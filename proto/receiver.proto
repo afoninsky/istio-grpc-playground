@@ -1,0 +1,13 @@
+syntax = "proto3";
+package internal.receiver;
+
+service Receiver {
+	// receives messages from any producer
+	rpc Publish(Message) returns (Empty) {}
+}
+
+message Message {
+	string text = 1;
+}
+
+message Empty {}
