@@ -1,0 +1,41 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    service: streamer
+  name: streamer
+  namespace: grpc-debug
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      service: streamer
+  template:
+    metadata:
+      labels:
+        service: streamer
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: streamer
+        image: gcr.io/peak-orbit-214114/istio-go:grpc
+        command:
+          - ./streamer
+          - -amqp_url
+          - amqp://guest:vwyUGIpmOv4GTqUkWMNiFvfC@amqp.staging:5672
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    service: streamer
+  name: streamer
+  namespace: grpc-debug
+spec:
+  ports:
+  - name: grpc
+    port: 55001
+    protocol: TCP
+    targetPort: 55001
+  selector:
+    service: streamer

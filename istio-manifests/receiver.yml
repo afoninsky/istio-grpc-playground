@@ -1,0 +1,77 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    service: receiver
+  name: receiver
+  namespace: grpc-debug
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      service: receiver
+  template:
+    metadata:
+      labels:
+        service: receiver
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: receiver
+        image: gcr.io/peak-orbit-214114/istio-go:grpc
+        command:
+          - ./receiver
+          - -streamer
+          - streamer:55001
+        ports:
+        - containerPort: 55000
+          name: grpc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    service: receiver
+  name: receiver
+  namespace: grpc-debug
+spec:
+  ports:
+  - name: grpc
+    port: 55000
+  selector:
+    service: receiver
+  type: LoadBalancer
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  labels:
+    service: receiver
+  name: receiver
+  namespace: grpc-debug
+spec:
+  gateways:
+  - istio-go
+  hosts:
+  - io.staging.streamlayer.io
+  http:
+  - match:
+    - port: 80
+    route:
+    - destination:
+        host: receiver
+        port:
+          number: 55000
+# ---
+# apiVersion: networking.istio.io/v1alpha3
+# kind: DestinationRule
+# metadata:
+#   labels:
+#     service: receiver
+#   name: receiver
+#   namespace: grpc-debug
+# spec:
+#   host: receiver
+#   trafficPolicy:
+#     loadBalancer:
+#       simple: LEAST_CONN

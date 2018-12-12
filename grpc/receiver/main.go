@@ -10,6 +10,9 @@ import (
 	"net"
 	"time"
 
+	translate "cloud.google.com/go/translate"
+	"golang.org/x/text/language"
+	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
@@ -21,19 +24,27 @@ var (
 	port            = flag.Int("port", 55000, "API port")
 	version         = flag.String("version", "receiver-1", "Service version")
 	streamerAddress = flag.String("streamer", "localhost:55001", "Streamer endpoint")
+	apiKey          = flag.String("api-key", "AIzaSyB9jxPQVweX0VSYdiiZnYwYcRvluO-P-a0", "Google translate API key")
 )
 
 type service struct {
-	client pbStreamer.StreamerClient
+	streamer   pbStreamer.StreamerClient
+	translator *translate.Client
 }
 
 // redirect incoming message to the sender service
 func (s *service) Publish(ctx context.Context, input *pb.Message) (*pb.Empty, error) {
-	log.Printf("Publishing -> %s", input.Text)
+	log.Printf("--->")
+	log.Printf("message: %s", input.Text)
+
+	translations, translateErr := s.translator.Translate(ctx,
+		[]string{input.Text}, language.French, nil)
+	failOnError(translateErr, "Failed to translate")
+	log.Printf("translate: %s", translations[0].Text)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	_, err := s.client.Receive(ctx, &pbStreamer.Message{
-		Text: input.Text,
+	_, err := s.streamer.Receive(ctx, &pbStreamer.Message{
+		Text: translations[0].Text,
 	})
 	if err != nil {
 		log.Printf("failed to send: %v", err)
@@ -42,25 +53,35 @@ func (s *service) Publish(ctx context.Context, input *pb.Message) (*pb.Empty, er
 	return &pb.Empty{}, nil
 }
 
+func failOnError(err error, msg string) {
+	if err != nil {
+		log.Fatalf("%s: %s", msg, err)
+	}
+}
+
 func main() {
 	flag.Parse()
 
+	// init translate api
+	ctx := context.Background()
+	tClient, tErr := translate.NewClient(ctx, option.WithAPIKey(*apiKey))
+	failOnError(tErr, "Failed to create google translate API")
+	defer tClient.Close()
+
 	// init connection to another service
-	conn, err := grpc.Dial(*streamerAddress, grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("cant connect to %s: %v", *streamerAddress, err)
-	}
+	conn, grpcErr := grpc.Dial(*streamerAddress, grpc.WithInsecure())
+	failOnError(grpcErr, "Failed to create grpc client")
 	defer conn.Close()
-	client := pbStreamer.NewStreamerClient(conn)
+	gClient := pbStreamer.NewStreamerClient(conn)
 
 	// create local grpc service
 	lis, listenErr := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", *port))
-	if listenErr != nil {
-		log.Fatalf("failed to listen: %v", err)
-	}
+	failOnError(listenErr, "Failed to listen")
+
 	grpcServer := grpc.NewServer()
 	pb.RegisterReceiverServer(grpcServer, &service{
-		client: client,
+		streamer:   gClient,
+		translator: tClient,
 	})
 	reflection.Register(grpcServer)
 	log.Printf("Starting API on port %d (version %s)", *port, *version)

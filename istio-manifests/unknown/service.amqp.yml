@@ -1,0 +1,16 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: amqp-external
+  namespace: grpc-debug
+spec:
+  hosts:
+  - www.anyhost.com
+  addresses:
+  - 0.0.0.0/0
+  ports:
+  - name: tcp
+    number: 5672
+    protocol: tcp
+  location: MESH_EXTERNAL
+  resolution: NONE

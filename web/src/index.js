@@ -25,4 +25,4 @@ function connect(host) {
 }
 
 
-connect('http://proxy:8080')
+connect('http://localhost:8080')

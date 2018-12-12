@@ -1,0 +1,21 @@
+# helm upgrade streamer-debug makeomatic/microfleet --install  -f streamer.yml --namespace streamer-debug
+name: streamer
+replicaCount: 1
+type: statefulset
+image:
+  repository: gcr.io/peak-orbit-214114/istio-go
+  tag: grpc
+command:
+  - ./streamer
+  - -amqp_url
+  - amqp://guest:vwyUGIpmOv4GTqUkWMNiFvfC@amqp.staging:5672
+service:
+  grpc:
+    port: 55001
+endpoint:
+  host: io-streamer.staging.streamlayer.io
+  ports:
+  - name: grpc
+    port: 80
+    targetPort: 55001
+    protocol: http

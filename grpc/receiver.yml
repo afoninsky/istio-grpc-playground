@@ -1,0 +1,21 @@
+# helm upgrade receiver-debug makeomatic/microfleet --install  -f receiver.yml --namespace receiver-debug
+name: receiver
+replicaCount: 1
+type: statefulset
+image:
+  repository: gcr.io/peak-orbit-214114/istio-go
+  tag: grpc
+command:
+  - ./receiver
+  - -streamer
+  - streamer.io-streamer:55001
+service:
+  grpc:
+    port: 55000
+endpoint:
+  host: io-receiver.staging.streamlayer.io
+  ports:
+  - name: grpc
+    port: 80
+    targetPort: 55000
+    protocol: http

@@ -1,0 +1,15 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: istio-go
+  namespace: grpc-debug
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - hosts:
+    - go.staging.streamlayer.io
+    port:
+      name: grpc
+      number: 80
+      protocol: http
