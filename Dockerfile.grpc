@@ -1,0 +1,15 @@
+FROM golang AS builder
+ENV CGO_ENABLED 0
+ENV GOOS linux
+ENV GOARCH amd64
+ENV GOBIN /bin
+WORKDIR /src
+RUN apt-get update && apt-get install gogoprotobuf -y
+RUN go get -u github.com/golang/protobuf/protoc-gen-go
+COPY . /src
+RUN cd grpc/receiver && go generate && go get -v && go build -a -installsuffix nocgo -o /receiver .
+RUN cd grpc/streamer && go generate && go get -v && go build -a -installsuffix nocgo -o /streamer .
+
+FROM scratch
+COPY --from=builder /receiver ./
+COPY --from=builder /streamer ./

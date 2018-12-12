@@ -1,13 +1,17 @@
 ### Structure
-1) User send direct messages to `consumer` using GRPC or via web-proxy.
-2) User receive message streams from `streamer` usding GRPC or via web-proxy
-3) `consumer` resend all incoming messages to `streamer`
+1) User send direct messages to `receiver` using grpc
+2) `receiver` proxies messages to `streamer`
+3) User subscribe to messages directly from `streamer` using grpc or via web-proxy using http
 
 
-###
+### Run locally
+```
+docker-compose build
+docker-compose up
+```
 
-docker run -p 5672:5672 rabbitmq:alpine
-
+### Test
+```
 grpcurl -plaintext localhost:55000 describe
 grpcurl -plaintext localhost:55001 describe
 
@@ -21,3 +25,4 @@ grpcurl \
     -plaintext \
     localhost:55001 \
     internal.streamer.Streamer/Subscribe
+```

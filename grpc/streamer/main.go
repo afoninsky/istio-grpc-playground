@@ -1,4 +1,4 @@
-//go:generate protoc --proto_path=../../proto --go_out=plugins=grpc:./proto/streamer streamer.proto
+//go:generate protoc --proto_path=../../proto --go_out=plugins=grpc:./proto/streamer ../../proto/streamer.proto
 package main
 
 import (
@@ -19,7 +19,7 @@ const keyName = "message"
 
 var (
 	port         = flag.Int("port", 55001, "API port")
-	version      = flag.String("version", "send-v1", "Service version")
+	version      = flag.String("version", "streamer-1", "Service version")
 	amqpURL      = flag.String("amqp_url", "amqp://localhost:5672", "AMQP url")
 	exchangeName = flag.String("exchange", "grpc-tests", "Exchange name")
 )
@@ -87,7 +87,7 @@ func main() {
 	failOnError(exchErr, "Failed to declare the Exchange")
 
 	// create GRPC server
-	lis, listenErr := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", *port))
+	lis, listenErr := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if listenErr != nil {
 		log.Fatalf("failed to listen: %v", listenErr)
 	}

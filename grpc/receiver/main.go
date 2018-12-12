@@ -1,5 +1,5 @@
-//go:generate protoc --proto_path=../../proto --go_out=plugins=grpc:./proto/receiver receiver.proto
-//go:generate protoc --proto_path=../../proto --go_out=plugins=grpc:./proto/streamer streamer.proto
+//go:generate protoc --proto_path=../../proto --go_out=plugins=grpc:./proto/receiver ../../proto/receiver.proto
+//go:generate protoc --proto_path=../../proto --go_out=plugins=grpc:./proto/streamer ../../proto/streamer.proto
 package main
 
 import (
@@ -19,7 +19,7 @@ import (
 
 var (
 	port            = flag.Int("port", 55000, "API port")
-	version         = flag.String("version", "rcv-v1", "Service version")
+	version         = flag.String("version", "receiver-1", "Service version")
 	streamerAddress = flag.String("streamer", "localhost:55001", "Streamer endpoint")
 )
 

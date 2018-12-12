@@ -1,0 +1,59 @@
+version: '2.1'
+services:
+
+  rabbitmq:
+    image: rabbitmq:alpine
+    ports:
+      - "5672:5672"
+    healthcheck:
+      test: "rabbitmqctl status"
+      interval: 3s
+      timeout: 2s
+      retries: 20
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    ports:
+      - "8080:80"
+
+  proxy:
+    build:
+      context: .
+      dockerfile: Dockerfile.proxy
+    entrypoint:
+      - /grpcwebproxy
+      - --backend_addr=grpc-streamer:55001
+      - --run_tls_server=false
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  grpc-receiver:
+    build:
+      context: .
+      dockerfile: Dockerfile.grpc
+    ports:
+      - "55000:55000"
+    entrypoint:
+      - ./receiver
+      - -streamer
+      - grpc-streamer:55001
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  grpc-streamer:
+    build:
+      context: .
+      dockerfile: Dockerfile.grpc
+    ports:
+      - "55001:55001"
+    entrypoint:
+      - ./streamer
+      - -amqp_url
+      - amqp://rabbitmq:5672
+    depends_on:
+      rabbitmq:
+        condition: service_healthy

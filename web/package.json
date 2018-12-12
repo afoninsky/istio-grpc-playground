@@ -1,0 +1,14 @@
+{
+  "scripts": {
+    "build": "webpack",
+    "proto": "protoc --plugin='protoc-gen-ts=./node_modules/.bin/protoc-gen-ts' --js_out='import_style=commonjs,binary:./generated' --proto_path=../proto --ts_out='service=true:./proto' streamer.proto"
+  },
+  "dependencies": {
+    "@types/google-protobuf": "^3.2.7",
+    "google-protobuf": "^3.5.0",
+    "grpc-web-client": "^0.7.0",
+    "ts-protoc-gen": "^0.8.0",
+    "webpack": "^4.8.1",
+    "webpack-cli": "^3.1.2"
+  }
+}
