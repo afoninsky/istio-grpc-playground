@@ -8,7 +8,7 @@ image:
 command:
   - ./receiver
   - -streamer
-  - streamer.io-streamer:55001
+  - streamer.streamer-debug:55001
 service:
   grpc:
     port: 55000

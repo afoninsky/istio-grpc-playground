@@ -10,9 +10,6 @@ import (
 	"net"
 	"time"
 
-	translate "cloud.google.com/go/translate"
-	"golang.org/x/text/language"
-	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
@@ -24,12 +21,12 @@ var (
 	port            = flag.Int("port", 55000, "API port")
 	version         = flag.String("version", "receiver-1", "Service version")
 	streamerAddress = flag.String("streamer", "localhost:55001", "Streamer endpoint")
-	apiKey          = flag.String("api-key", "AIzaSyB9jxPQVweX0VSYdiiZnYwYcRvluO-P-a0", "Google translate API key")
+	// apiKey          = flag.String("api-key", "AIzaSyB9jxPQVweX0VSYdiiZnYwYcRvluO-P-a0", "Google translate API key")
 )
 
 type service struct {
-	streamer   pbStreamer.StreamerClient
-	translator *translate.Client
+	streamer pbStreamer.StreamerClient
+	// translator *translate.Client
 }
 
 // redirect incoming message to the sender service
@@ -37,14 +34,15 @@ func (s *service) Publish(ctx context.Context, input *pb.Message) (*pb.Empty, er
 	log.Printf("--->")
 	log.Printf("message: %s", input.Text)
 
-	translations, translateErr := s.translator.Translate(ctx,
-		[]string{input.Text}, language.French, nil)
-	failOnError(translateErr, "Failed to translate")
-	log.Printf("translate: %s", translations[0].Text)
+	// translations, translateErr := s.translator.Translate(ctx,
+	// 	[]string{input.Text}, language.French, nil)
+	// failOnError(translateErr, "Failed to translate")
+	// log.Printf("translate: %s", translations[0].Text)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	_, err := s.streamer.Receive(ctx, &pbStreamer.Message{
-		Text: translations[0].Text,
+		// Text: translations[0].Text,
+		Text: input.Text,
 	})
 	if err != nil {
 		log.Printf("failed to send: %v", err)
@@ -63,10 +61,10 @@ func main() {
 	flag.Parse()
 
 	// init translate api
-	ctx := context.Background()
-	tClient, tErr := translate.NewClient(ctx, option.WithAPIKey(*apiKey))
-	failOnError(tErr, "Failed to create google translate API")
-	defer tClient.Close()
+	// ctx := context.Background()
+	// tClient, tErr := translate.NewClient(ctx, option.WithAPIKey(*apiKey))
+	// failOnError(tErr, "Failed to create google translate API")
+	// defer tClient.Close()
 
 	// init connection to another service
 	conn, grpcErr := grpc.Dial(*streamerAddress, grpc.WithInsecure())
@@ -80,8 +78,8 @@ func main() {
 
 	grpcServer := grpc.NewServer()
 	pb.RegisterReceiverServer(grpcServer, &service{
-		streamer:   gClient,
-		translator: tClient,
+		streamer: gClient,
+		// translator: tClient,
 	})
 	reflection.Register(grpcServer)
 	log.Printf("Starting API on port %d (version %s)", *port, *version)
